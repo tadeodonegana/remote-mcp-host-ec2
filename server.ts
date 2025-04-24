@@ -10,21 +10,37 @@ const server = new McpServer({
   version: "1.0.0"
 });
 
+// Store API keys per session
+const sessionApiKeys: { [sessionId: string]: string } = {};
+
 // Register web search tool
 server.tool(
   "search_web",
   "Search the web for the given query",
   { query: z.string().describe("The search query to look up on the web") },
   async (args, extra) => {
+    // Assume extra.sessionId contains the ID for the current request context
+    const sessionId = extra.sessionId as string; 
+    const apiKey = sessionApiKeys[sessionId];
+
+    if (!sessionId) {
+      console.error("ERROR: Could not determine sessionId for the request.");
+      return {
+        content: [{ type: "text", text: "Error: Internal server error (missing session ID)." }]
+      };
+    }
+
     try {
-      // Get API key from environment variable
-      const apiKey = process.env.SERPER_API_KEY;
+      // Get API key associated with this session
+      // const apiKey = process.env.SERPER_API_KEY; // OLD: Reading from env var
       
       // Log API key status (partial key for security)
       if (!apiKey) {
-        console.error("ERROR: SERPER_API_KEY environment variable is not set");
+        // console.error("ERROR: SERPER_API_KEY environment variable is not set"); // OLD message
+        console.error(`ERROR: API key not found for session ${sessionId}`);
         return {
-          content: [{ type: "text", text: "Error: API key not found in environment variables. Please set SERPER_API_KEY." }]
+          // content: [{ type: "text", text: "Error: API key not found in environment variables. Please set SERPER_API_KEY." }] // OLD message
+          content: [{ type: "text", text: "Error: API key not configured for this session." }]
         };
       } else {
         // Log first and last 4 chars of API key for verification
@@ -109,14 +125,28 @@ const app = express();
 const transports: { [sessionId: string]: SSEServerTransport } = {};
 
 app.get("/sse", async (req: Request, res: Response) => {
+  // Extract API key from header
+  const apiKey = req.headers['x-serper-api-key'] as string;
+
+  if (!apiKey) {
+    console.error("Connection rejected: Missing X-Serper-Api-Key header.");
+    res.status(400).send("Missing X-Serper-Api-Key header");
+    return;
+  }
+
   const transport = new SSEServerTransport("/messages", res);
   transports[transport.sessionId] = transport;
+  sessionApiKeys[transport.sessionId] = apiKey; // Store API key for this session
 
-  console.log("SSE session started:", transport.sessionId);
+  // console.log("SSE session started:", transport.sessionId); // Original log
+  console.log("SSE session started:", transport.sessionId, "with API key provided."); // Updated log (avoid logging key)
+
 
   res.on("close", () => {
-    console.log(" SSE session closed:", transport.sessionId);
+    // console.log(" SSE session closed:", transport.sessionId); // Original log
+    console.log("SSE session closed:", transport.sessionId); // Updated log
     delete transports[transport.sessionId];
+    delete sessionApiKeys[transport.sessionId]; // Clean up API key
   });
 
   await server.connect(transport);
@@ -141,7 +171,8 @@ console.log("SERVER STARTUP - ENVIRONMENT CHECK");
 console.log("----------------------------------------");
 console.log(`Node.js version: ${process.version}`);
 console.log(`PORT: ${PORT}`);
-console.log(`SERPER_API_KEY: ${process.env.SERPER_API_KEY ? "Set (not displaying for security)" : "NOT SET"}`);
+// console.log(`SERPER_API_KEY: ${process.env.SERPER_API_KEY ? "Set (not displaying for security)" : "NOT SET"}`); // No longer reading from env
+console.log("Server expects 'X-Serper-Api-Key' header for API key.");
 console.log("----------------------------------------");
 
 app.listen(PORT, () => {
