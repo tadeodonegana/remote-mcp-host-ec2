@@ -2,12 +2,12 @@
   "name": "mcp-server-remote",
   "version": "1.0.0",
   "description": "MCP Server with web search capability",
-  "main": "server.js",
+  "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node dist/server.js",
     "build": "tsc",
-    "dev": "tsc -w & nodemon server.js"
+    "dev": "tsc -w & nodemon dist/server.js"
   },
   "keywords": [],
   "author": "",
