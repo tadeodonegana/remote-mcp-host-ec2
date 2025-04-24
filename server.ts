@@ -16,6 +16,10 @@ server.tool(
   "Search the web for the given query",
   { query: z.string().describe("The search query to look up on the web") },
   async (args, extra) => {
+    console.log("--- search_web tool execution ---");
+    console.log("Arguments (args):", JSON.stringify(args));
+    console.log("Extra context (extra):", JSON.stringify(extra, null, 2)); // Pretty print extra
+
     try {
       // Get API key from environment variable
       const apiKey = process.env.SERPER_API_KEY;
@@ -53,6 +57,8 @@ server.tool(
       return {
         content: [{ type: "text", text: "Error: Could not complete the search." }]
       };
+    } finally {
+      console.log("--- search_web tool execution complete ---");
     }
   }
 );
