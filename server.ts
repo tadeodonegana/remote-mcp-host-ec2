@@ -19,10 +19,6 @@ server.tool(
   "Search the web for the given query",
   { query: z.string().describe("The search query to look up on the web") },
   async (args, extra) => {
-    console.log("--- search_web tool execution ---");
-    console.log("Arguments (args):", JSON.stringify(args));
-    console.log("Extra context (extra):", JSON.stringify(extra, null, 2)); // Keep logging extra for now
-
     try {
       // Get sessionId from extra context
       const sessionId = extra.sessionId as string;
@@ -45,15 +41,6 @@ server.tool(
         };
       }
 
-      // Log first and last 4 chars of API key for verification (Optional but helpful)
-      const keyLength = apiKey.length;
-      const maskedKey = keyLength > 8 
-        ? `${apiKey.substring(0, 4)}...${apiKey.substring(keyLength - 4)}` 
-        : "***short-key***";
-      console.log(`[${sessionId}] Using API key: ${maskedKey} (length: ${keyLength})`);
-
-      console.log(`[${sessionId}] Searching for query: "${args.query}"`);
-      
       // Call Serper API using the session-specific key
       const response = await axios.post(
         "https://google.serper.dev/search",
@@ -66,8 +53,6 @@ server.tool(
         }
       );
       
-      console.log(`[${sessionId}] Search API responded with status: ${response.status}`);
-
       // Create a simple text report of search results
       let resultText = `Search results for: ${args.query}\n\n`;
       
@@ -89,8 +74,6 @@ server.tool(
       return {
         content: [{ type: "text", text: "Error: Could not complete the search." }]
       };
-    } finally {
-      console.log("--- search_web tool execution complete ---");
     }
   }
 );
@@ -102,20 +85,13 @@ const transports: { [sessionId: string]: SSEServerTransport } = {};
 app.get("/sse", async (req: Request, res: Response) => {
   // Extract API key from header
   const apiKey = req.headers['x-serper-api-key'] as string;
-  let apiKeyStatusMessage = "with API key provided.";
-
-  if (!apiKey) {
-    apiKeyStatusMessage = "WITHOUT API key header (tool execution will likely fail).";
-    // Log as warning, don't reject connection here
-    console.warn(`[${req.ip}] Connection established without X-Serper-Api-Key header.`); 
-  }
 
   const transport = new SSEServerTransport("/messages", res);
   transports[transport.sessionId] = transport;
   // Store the provided API key (or empty string if missing) for this session
   sessionApiKeys[transport.sessionId] = apiKey || ""; 
 
-  console.log(`SSE session started: ${transport.sessionId} ${apiKeyStatusMessage}`);
+  console.log(`SSE session started: ${transport.sessionId}`);
 
   res.on("close", () => {
     console.log(" SSE session closed:", transport.sessionId);
