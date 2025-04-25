@@ -1,18 +1,7 @@
-# MCP Web Search Server
+# Build and deploy remote MCP servers to AWS EC2
 
-## Prerequisites
+Learn how to build and deploy MCP servers to AWS EC2, making them available for remote usage.
 
-- Node.js 16.x or higher
-- A Serper.dev API key ([Get one here](https://serper.dev/))
+![Diagram showing multiple MCP Clients connecting to a remote AWS EC2 MCP Server](remote_mcp_server.png)
 
-## Setup
-
-1. Clone this repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Run the server:
-   ```
-   npm run dev
-   ```
+[Blog post with step-by-step solution](https://tadeodonegana.com/posts/deploy-mcp-server-remote-aws/).
